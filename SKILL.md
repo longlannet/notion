@@ -21,6 +21,14 @@ For OpenClaw, this is the preferred Notion path right now: token-based, remote-f
 
 Prefer bundled scripts over raw curl or ad-hoc JSON.
 
+## Platform and validation boundaries
+
+- Resolve relative `scripts/...` paths from this skill's own root; `{baseDir}` means the resolved directory containing this `SKILL.md`, not a literal shell variable.
+- During skill sync, review, or offline validation, do **not** run `selfcheck.py`, `diagnose_capabilities.py`, shell wrappers, or any `validate_*` live regression. Some helpers create/update/delete remote objects, and file uploads may remain after cleanup. Use AST parsing, `bash -n`, and reviewed offline argument parsing instead; even `--help` is not safe for arbitrary legacy wrappers.
+- Live diagnostic or regression runs require separate authorization, a shared disposable test parent, and explicit cleanup/readback. Setting `NOTION_TEST_PARENT_PAGE_ID` is a safety prerequisite, not user consent.
+- Retained [block-type examples](references/block-types.md) and [optional ntn CLI/Workers knowledge](references/ntn-cli-and-workers.md) supplement this workflow; they do not replace the bundled scripts or override the `2026-03-11` API pin. Worker deployment is outside the core toolbox and needs separate scope.
+
+
 ## Mental model: page vs database vs data source
 
 On Notion `2026-03-11`, keep these layers straight:
@@ -98,15 +106,19 @@ Use this skill when you need a practical Notion toolbox rather than one single w
 
 ## Operating principles
 
-1. Run `scripts/selfcheck.py` first when auth or connectivity is uncertain.
-2. If a failure might be permission/capability/async related, run `scripts/diagnose_capabilities.py`.
+1. For an authorized live troubleshooting task only, run `scripts/selfcheck.py` when auth or connectivity is uncertain; never as an offline merge check.
+2. If a failure might be permission/capability/async related, inspect `scripts/diagnose_capabilities.py` and obtain authorization for its actual checks before running it.
 3. Prefer the highest-level stable helper that fits the task.
 4. Fall back to `scripts/notion_api.py` only when wrappers or unified helpers are not enough.
 5. Treat this `SKILL.md` as the primary operating document.
 
+## Offline merge verification
+
+Follow [safe staging validation](references/offline-validation.md). It records the no-network review/AST/parser workflow and explains why blanket `--help` runs or live regressions are unsafe. Offline success does not establish key availability or remote permissions.
+
 ## Validation / regression scripts
 
-Use these when you want a quick confidence pass after changing the skill:
+The following are **live, potentially mutating regressions**, not a default confidence pass for a skill merge. Run only with separate authorization for disposable remote resources:
 
 - `bash scripts/validate_2026_migration.sh`
   - focused migration check for the `2026-03-11` switch
